@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Store/etc/config.xsd">
+    <default>
+        <payment>
+            <raypay>
+                <active>1</active>
+                <title>پرداخت با درگاه رای پی</title>
+                <order_status>pending_payment</order_status>
+                <after_order_status>completed</after_order_status>
+                <payment_action>true</payment_action>
+                <model>RayPay\RayPay\Model\RayPay</model>
+                <group>offline</group>
+                <sort_order>1</sort_order>
+                <currency>0</currency>
+                <success_massage>پرداخت شما با موفقیت انجام شد.</success_massage>
+                <failed_massage>پرداخت شما ناموفق بوده است. لطفا مجددا تلاش نمایید یا در صورت بروز اشکال با مدیر سایت تماس بگیرید.</failed_massage>
+            </raypay>
+        </payment>
+    </default>
+</config>
