@@ -19,11 +19,16 @@
                        showInStore="0">
                     <label>شناسه کاربری</label>
                 </field>
-                <field id="acceptor_code" translate="label" type="text" sortOrder="12" showInDefault="1" showInWebsite="1"
+                <field id="marketing_id" translate="label" type="text" sortOrder="12" showInDefault="1" showInWebsite="1"
                        showInStore="0">
-                    <label>کد پذیرنده</label>
+                    <label>شناسه کسب و کار</label>
                 </field>
-                <field id="success_massage" translate="label" type="text" sortOrder="13" showInDefault="1"
+                <field id="sandbox" translate="label" type="select" sortOrder="13" showInDefault="1" showInWebsite="1"
+                       showInStore="0">
+                    <label>فعالسازی SandBox</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="success_massage" translate="label" type="text" sortOrder="14" showInDefault="1"
                        showInWebsite="1" showInStore="1">
                     <label>پیام پرداخت موفق</label>
                     <comment>متن پیامی که می خواهید به کاربر نمایش دهید را وارد کنید. همچنین می
@@ -31,7 +36,7 @@
                         استفاده نمایید.
                     </comment>
                 </field>
-                <field id="failed_massage" translate="label" type="text" sortOrder="14" showInDefault="1"
+                <field id="failed_massage" translate="label" type="text" sortOrder="15" showInDefault="1"
                        showInWebsite="1" showInStore="1">
                     <label>پیام پرداخت ناموفق</label>
                     <comment>متن پیامی که می خواهید به کاربر نمایش دهید را وارد کنید. همچنین می
@@ -39,7 +44,7 @@
                         استفاده نمایید.
                     </comment>
                 </field>
-                <field id="currency" translate="label" type="select" sortOrder="15" showInDefault="1" showInWebsite="0"
+                <field id="currency" translate="label" type="select" sortOrder="16" showInDefault="1" showInWebsite="0"
                        showInStore="0">
                     <label>واحد پولتان تومان است؟</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>

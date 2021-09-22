@@ -150,7 +150,8 @@ class RayPay extends \Magento\Framework\View\Element\Template
         $response['result'] = "";
 
         $user_id = $this->getConfig('user_id');
-        $acceptor_code = $this->getConfig('acceptor_code');
+        $marketing_id = $this->getConfig('marketing_id');
+        $sandbox = $this->getConfig('sandbox') == 1;
 
 
         $order  = $this->getOrderByIncrementId($order_id);
@@ -172,7 +173,7 @@ class RayPay extends \Magento\Framework\View\Element\Template
             $amount *= 10;
         }
         $desc = "پرداخت فروشگاه مجنتو ۲ با شماره سفارش  " .$order_id;
-        $redirectUrl = $this->_urlBuilder->getUrl('raypay/redirect/callback?order_id=' . $order_id . '&entity_id=' . $entityId .'&');
+        $redirectUrl = $this->_urlBuilder->getUrl('raypay/redirect/callback?order_id=' . $order_id . '&entity_id=' . $entityId);
         $redirectUrl = rtrim($redirectUrl, "/");
         $invoice_id             = round(microtime(true) * 1000);
 
@@ -191,14 +192,15 @@ class RayPay extends \Magento\Framework\View\Element\Template
             'userID'       => $user_id,
             'redirectUrl'  => $redirectUrl,
             'factorNumber' => strval($order_id),
-            'acceptorCode' => $acceptor_code,
+            'marketingID' => $marketing_id,
             'email'        => $email,
             'mobile'       => $mobile,
             'fullName'     => $name,
-            'comment'      => $desc
+            'comment'      => $desc,
+            'enableSandBox'      => $sandbox
         );
 
-        $ch = curl_init('https://api.raypay.ir/raypay/api/v1/Payment/getPaymentTokenWithUserID');
+        $ch = curl_init('https://api.raypay.ir/raypay/api/v1/Payment/pay');
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -206,7 +208,7 @@ class RayPay extends \Magento\Framework\View\Element\Template
         $result = curl_exec($ch);
         $result = json_decode($result);
 
-        $http_status = $result->StatusCode;
+        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($http_status != 200 || empty($result) || empty($result->Data)) {
@@ -220,44 +222,31 @@ class RayPay extends \Magento\Framework\View\Element\Template
             $this->_checkoutSession->setTestData($invoice_id);
             $this->changeStatus($this->getOrderStatus(), null, $entityId);
             $response['state'] = true;
-            $access_token = $result->Data->Accesstoken;
-            $terminal_id  = $result->Data->TerminalID;
-
-            echo '<p style="color:#ff0000; font:18px Tahoma; direction:rtl;">در حال اتصال به درگاه بانکی. لطفا صبر کنید ...</p>';
-            echo '<form name="frmRayPayPayment" method="post" action=" https://mabna.shaparak.ir:8080/Pay ">';
-            echo '<input type="hidden" name="TerminalID" value="' . $terminal_id . '" />';
-            echo '<input type="hidden" name="token" value="' . $access_token . '" />';
-            echo '<input class="submit" type="submit" value="پرداخت" /></form>';
-            echo '<script>document.frmRayPayPayment.submit();</script>';
-            exit();
+            $token = $result->Data;
+            $link='https://my.raypay.ir/ipg?token=' . $token;
+            $this->response->setRedirect($link);
         }
-
         return $response;
     }
 
     public function callback()
     {
         $order_id = (string) $this->getRequest()->getParam('order_id');
-        $invoice_id = (string) $this->getRequest()->getParam('?invoiceID');
         $entity_id = (int) $this->getRequest()->getParam('entity_id');
         $order = $this->getOrderByEntityId($entity_id);
         $response['state'] = false;
         $response['result'] = "";
 
-        if (!$order || empty($order_id) || empty($invoice_id)) {
+        if (!$order || empty($order_id)) {
             $response['result'] = "سفارش پیدا نشده است.";
             $this->changeStatus(Order::STATE_CANCELED, $response['result'] , $entity_id);
 
             $this->messageManager->addErrorMessage($response['result']);
             $this->response->setRedirect($this->_urlBuilder->getUrl('checkout/onepage/failure'));
         } else {
-                $verify_data = [
-                    'order_id' => $order_id,
-                ];
-
                 $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, 'https://api.raypay.ir/raypay/api/v1/Payment/checkInvoice?pInvoiceID=' . $invoice_id);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($verify_data));
+                curl_setopt($ch, CURLOPT_URL, 'https://api.raypay.ir/raypay/api/v1/Payment/verify');
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($_POST));
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, [
                     'Content-Type: application/json',
@@ -265,7 +254,7 @@ class RayPay extends \Magento\Framework\View\Element\Template
 
                 $result = curl_exec($ch);
                 $result = json_decode($result);
-                $http_status = $result->StatusCode;
+                $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
                 if ($http_status != 200) {
@@ -276,20 +265,21 @@ class RayPay extends \Magento\Framework\View\Element\Template
                     $this->response->setRedirect($this->_urlBuilder->getUrl('checkout/onepage/failure'));
                 }
 
-                $state           = $result->Data->State;
+                $state           = $result->Data->Status;
                 $verify_order_id = $result->Data->FactorNumber;
+                $verify_invoice_id = $result->Data->InvoiceID;
                 $verify_amount   = $result->Data->Amount;
                 if (empty($verify_amount) || empty($verify_order_id) || $state != 1) {
-                    $response['result'] = $this->raypay_get_failed_message($invoice_id);
+                    $response['result'] = $this->raypay_get_failed_message($verify_invoice_id);
                     $this->changeStatus(Order::STATE_CANCELED, $response['result'] , $entity_id);
 
                     $this->messageManager->addErrorMessage($response['result']);
                     $this->response->setRedirect($this->_urlBuilder->getUrl('checkout/onepage/failure'));
                 } else {
                     $response['state'] = true;
-                    $response['result'] = $this->raypay_get_success_message($invoice_id);
+                    $response['result'] = $this->raypay_get_success_message($verify_invoice_id);
                     $this->order = $this->getOrderByEntityId($entity_id);
-                    $this->addTransaction($this->order, $invoice_id);
+                    $this->addTransaction($this->order, $verify_invoice_id);
 
                     $this->order->addStatusToHistory($this->getAfterOrderStatus(), sprintf('<pre>%s</pre>', print_r($result->Data, true)), false);
                     $this->order->save();

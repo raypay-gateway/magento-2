@@ -7,7 +7,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 == Description ==
 
 After installing and enabling this plugin, your customers can pay through RayPay gateway.
-For doing a transaction through RayPay gateway, you must have UserID and AcceptorCode. You can obtain the these parameters by going to your RayPay account(https://panel.raypay.ir) .
+For doing a transaction through RayPay gateway, you must have UserID and MarketingID. You can obtain the these parameters by going to your RayPay account(https://panel.raypay.ir) .
 
 == Installation/Usage
 
